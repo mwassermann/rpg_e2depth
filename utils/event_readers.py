@@ -69,7 +69,7 @@ class EventDataset(Dataset):
 
     def parse_event_folder(self):
         """Parses the event folder to check its validity and read the parameters of the event representation."""
-        raise NotImplementedError
+        self.num_bins = None
 
     def __len__(self):
         return self.length
@@ -80,7 +80,8 @@ class EventDataset(Dataset):
 
     def num_channels(self):
         """Returns the number of channels of the event tensor."""
-        raise NotImplementedError
+        return self.num_bins
+
 
     def get_index_at(self, i):
         """Returns the index of the ith event tensor"""
@@ -90,9 +91,34 @@ class EventDataset(Dataset):
         """Returns the timestamp of the ith event tensor"""
         return self.stamps[self.get_index_at(i)]
 
-    def __getitem(self, i):
+    def __getitem__(self, i, transform_seed=None):
         """Returns a C x H x W event tensor for the ith element in the dataset."""
-        raise NotImplementedError
+        assert(i >= 0)
+        assert(i < self.length)
+
+        if transform_seed is None:
+            transform_seed = random.randint(0, 2**32)
+
+        # event_tensor will be a [num_bins x H x W] floating point array
+        event_tensor = np.load(join(self.event_folder, 'events_{:010d}.npy'.format(self.first_valid_idx + i)))
+        if self.normalize:
+            # normalize the event tensor (voxel grid) in such a way that the mean and stddev of the nonzero values
+            # in the tensor are equal to (0.0, 1.0)
+            mask = np.nonzero(event_tensor)
+            if mask[0].size > 0:
+                mean, stddev = event_tensor[mask].mean(), event_tensor[mask].std()
+                if stddev > 0:
+                    event_tensor[mask] = (event_tensor[mask] - mean) / stddev
+
+        #self.num_bins = event_tensor.shape[0]
+        self.num_bins = 5
+        
+        #events = torch.from_numpy(event_tensor)  # [C x H x W]
+        #if self.transform:
+         #   random.seed(transform_seed)
+          #  events = self.transform(events)
+
+        return {'events': event_tensor}  # [num_bins x H x W] tensor
 
 
 

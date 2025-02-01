@@ -379,7 +379,7 @@ if __name__ == "__main__":
         #print ("max pred", np.max(predicted_depth[~np.isnan(predicted_depth)]))
         #print ("min target", np.min(target_depth[~np.isnan(target_depth)]))
         #print ("max target", np.max(target_depth[~np.isnan(target_depth)]))
-
+        print('prediction: ', predicted_depth.shape, 'target', target_depth.shape)
         assert predicted_depth.shape == target_depth.shape
 
         depth_mask = (np.ones_like(target_depth)>0)

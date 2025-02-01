@@ -1,6 +1,7 @@
 import torch
 from utils.loading_utils import load_model, get_device
-from utils.event_readers import VoxelGridDataset 
+from utils.event_readers import EventDataset 
+from utils.event_tensor_utils import events_to_voxel_grid_pytorch
 from os.path import join, basename
 import numpy as np
 import json
@@ -42,18 +43,21 @@ if __name__ == "__main__":
 
     # hack to get the image size: create a dummy dataset,
     # grab the first data item and read the required info
-    dummy_dataset = VoxelGridDataset(base_folder,
+    dummy_dataset = EventDataset(base_folder,
                                      event_folder,
                                      args.start_time,
                                      args.stop_time,
                                      transform=None)
+    
     data = dummy_dataset[0]
-    _, height, width = data['events'].shape
+    print('SHAPE DATA ', data['events'].shape)
+    height, width = data['events'].shape
+    print('height ', height, 'width ', width)
     height = height - args.low_border_crop
     
     estimator = DepthEstimator(model, height, width, model.num_bins, args)
 
-    events_dataset = VoxelGridDataset(base_folder=base_folder,
+    events_dataset = EventDataset(base_folder=base_folder,
                                event_folder = event_folder,
                                start_time=args.start_time,
                                stop_time=args.stop_time,
@@ -77,7 +81,11 @@ if __name__ == "__main__":
             print('{} / {}'.format(idx, N))
 
         data = events_dataset[idx]
-        event_tensor = data['events'][:,:height,:]
+        events = data['events'][:height,:]
+        event_test = events_to_voxel_grid_pytorch(events, 5, width, height, device)
+        event_tensor = events_to_voxel_grid_pytorch(events, 5, width, height, device)[:,:height,:]
+        #print('events: ', events.shape,'tensor: ', event_tensor.shape, 'test: ', event_test.shape)
+        #event_tensor = data['events'][:height,:].float() 
 
         estimator.update_reconstruction(event_tensor, idx)
         idx += 1

@@ -23,7 +23,7 @@ class EventPreprocessor:
         self.hot_pixel_mask = None
         if options.hot_pixels_file:
             try:
-                self.hot_pixel_locations = np.loadtxt(options.hot_pixels_file, delimiter=',').astype(np.int)
+                self.hot_pixel_locations = np.loadtxt(options.hot_pixels_file, delimiter=',').astype(int)
                 print('Will remove {} hot pixels'.format(self.hot_pixel_locations.shape[0]))
             except IOError:
                 print('WARNING: could not load hot pixels file: {}'.format(options.hot_pixels_file))
@@ -94,12 +94,12 @@ def events_to_voxel_grid(events, num_bins, width, height):
 
     events[:, 0] = (num_bins - 1) * (events[:, 0] - first_stamp) / deltaT
     ts = events[:, 0]
-    xs = events[:, 1].astype(np.int)
-    ys = events[:, 2].astype(np.int)
+    xs = events[:, 1].astype(int)
+    ys = events[:, 2].astype(int)
     pols = events[:, 3]
     pols[pols == 0] = -1  # polarity should be +1 / -1
 
-    tis = ts.astype(np.int)
+    tis = ts.astype(int)
     dts = ts - tis
     vals_left = pols * (1.0 - dts)
     vals_right = pols * dts
@@ -181,7 +181,7 @@ def events_to_voxel_grid_pytorch(events, num_bins, width, height, device):
                                   index=xs[valid_indices] + ys[valid_indices] * width +
                                   (tis_long[valid_indices] + 1) * width * height,
                                   source=vals_right[valid_indices])
-
+        print(voxel_grid.shape)
         voxel_grid = voxel_grid.view(num_bins, height, width)
 
     return voxel_grid
