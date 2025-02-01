@@ -4,7 +4,8 @@ from model.model import *
 
 def load_model(path_to_model):
     print('Loading model {}...'.format(path_to_model))
-    raw_model = torch.load(path_to_model)
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    raw_model = torch.load(path_to_model, map_location=device)
     arch = raw_model['arch']
 
     try:
@@ -23,10 +24,8 @@ def load_model(path_to_model):
 
 
 def get_device(use_gpu):
-    if use_gpu and torch.cuda.is_available():
-        device = torch.device('cuda:0')
-    else:
-        device = torch.device('cpu')
+    device = torch.device('cuda:0') if use_gpu and torch.cuda.is_available() else torch.device('mps') if use_gpu and torch.backends.mps.is_available() else torch.device('cpu')
+
     print('Device:', device)
 
     return device

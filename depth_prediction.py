@@ -5,7 +5,7 @@ from model.model import *
 from utils.inference_utils import CropParameters, ImageDepthWriter, DepthDisplay
 from utils.event_tensor_utils import EventPreprocessor
 from utils.util import robust_min, robust_max
-from utils.timers import CudaTimer, cuda_timers
+from utils.timers import AutoTimer
 from os.path import join
 from collections import deque
 
@@ -15,7 +15,7 @@ class DepthEstimator:
 
         self.model = model
         self.use_gpu = options.use_gpu
-        self.device = torch.device('cuda:0') if self.use_gpu else torch.device('cpu')
+        self.device = torch.device('cuda:0') if self.use_gpu and torch.cuda.is_available() else torch.device('mps') if self.use_gpu and torch.backends.mps.is_available() else torch.device('cpu')
         self.height = height
         self.width = width
         self.num_bins = num_bins
@@ -56,9 +56,9 @@ class DepthEstimator:
 
         with torch.no_grad():
 
-            with CudaTimer('Reconstruction'):
+            with AutoTimer('Reconstruction', self.device):
 
-                with CudaTimer('NumPy (CPU) -> Tensor (GPU)'):
+                with AutoTimer('NumPy (CPU) -> Tensor (GPU)', self.device):
                     events = event_tensor.unsqueeze(dim=0)
                     events = events.to(self.device)
 
@@ -73,7 +73,7 @@ class DepthEstimator:
 
                 # Reconstruct new intensity image for each channel (grayscale )
                 for channel in events_for_each_channel.keys():
-                    with CudaTimer('Inference'):
+                    with AutoTimer('Inference', self.device):
                         new_predicted_frame, states = self.model(events_for_each_channel[channel],
                                                                  self.last_states_for_each_channel[channel])
 
@@ -88,7 +88,7 @@ class DepthEstimator:
                     # Intensity rescaler (on GPU)
                     #new_predicted_frame = self.intensity_rescaler(new_predicted_frame)
 
-                    with CudaTimer('Tensor (GPU) -> NumPy (CPU)'):
+                    with AutoTimer('Tensor (GPU) -> NumPy (CPU)', self.device):
                         reconstructions_for_each_channel[channel] = new_predicted_frame[0, 0, crop.iy0:crop.iy1,
                                                                                         crop.ix0:crop.ix1].cpu().numpy()
 

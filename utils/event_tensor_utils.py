@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from .timers import CudaTimer, Timer
+from .timers import AutoTimer
 
 
 class EventPreprocessor:
@@ -42,7 +42,7 @@ class EventPreprocessor:
 
         # Remove (i.e. zero out) the hot pixels
         if self.hot_pixel_mask is not None:
-            with CudaTimer('Remove hot pixels'):
+            with AutoTimer('Remove hot pixels'):
                 events = events * self.hot_pixel_mask
 
         # Flip tensor vertically and horizontally
@@ -52,7 +52,7 @@ class EventPreprocessor:
         # Normalize the event tensor (voxel grid) so that
         # the mean and stddev of the nonzero values in the tensor are equal to (0.0, 1.0)
         if not self.no_normalize:
-            with CudaTimer('Normalization'):
+            with AutoTimer('Normalization', events.device):
                 nonzero_ev = (events != 0)
                 num_nonzeros = nonzero_ev.sum()
                 if num_nonzeros > 0:
@@ -128,7 +128,7 @@ def events_to_voxel_grid_pytorch(events, num_bins, width, height, device):
     :return voxel_grid: PyTorch event tensor (on the device specified)
     """
 
-    DeviceTimer = CudaTimer if device.type == 'cuda' else Timer
+    DeviceTimer = lambda name: AutoTimer(name, device)
 
     assert(events.shape[1] == 4)
     assert(num_bins > 0)

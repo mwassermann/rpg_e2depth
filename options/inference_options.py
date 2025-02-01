@@ -9,6 +9,10 @@ def set_inference_options(parser):
     parser.add_argument('--use_fp16', dest='use_fp16', action='store_true')
     parser.set_defaults(use_fp16=False)
 
+    #parser.add_argument('--event_filter', choices=['adaptiveThreshold', 'density'], type=str, default=None,
+    #                    help="Choose event filtering method: 'adaptiveThreshold' or 'density'. Default is None.")
+    #parser.set_defaults(event_filter=None)
+
     """ Display """
     parser.add_argument('--display', dest='display', action='store_true')
     parser.set_defaults(display=False)
