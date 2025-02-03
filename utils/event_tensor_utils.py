@@ -181,7 +181,7 @@ def events_to_voxel_grid_pytorch(events, num_bins, width, height, device):
                                   index=xs[valid_indices] + ys[valid_indices] * width +
                                   (tis_long[valid_indices] + 1) * width * height,
                                   source=vals_right[valid_indices])
-        print(voxel_grid.shape)
+        #print(voxel_grid.shape)
         voxel_grid = voxel_grid.view(num_bins, height, width)
 
     return voxel_grid

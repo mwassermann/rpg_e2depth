@@ -49,10 +49,10 @@ if __name__ == "__main__":
                                      args.stop_time,
                                      transform=None)
     
-    data = dummy_dataset[0]
-    print('SHAPE DATA ', data['events'].shape)
-    height, width = data['events'].shape
-    print('height ', height, 'width ', width)
+    #data = dummy_dataset[0]
+    #print('SHAPE DATA ', data['events'].shape)
+    height, width = 260, 346
+    #print('height ', height, 'width ', width)
     height = height - args.low_border_crop
     
     estimator = DepthEstimator(model, height, width, model.num_bins, args)
@@ -81,10 +81,10 @@ if __name__ == "__main__":
             print('{} / {}'.format(idx, N))
 
         data = events_dataset[idx]
-        events = data['events'][:height,:]
-        event_test = events_to_voxel_grid_pytorch(events, 5, width, height, device)
+        events = data['events']
+        #event_test = events_to_voxel_grid_pytorch(events, 5, width, height, device)
         event_tensor = events_to_voxel_grid_pytorch(events, 5, width, height, device)[:,:height,:]
-        #print('events: ', events.shape,'tensor: ', event_tensor.shape, 'test: ', event_test.shape)
+        print('events: ', events.shape,'tensor: ', event_tensor.shape)
         #event_tensor = data['events'][:height,:].float() 
 
         estimator.update_reconstruction(event_tensor, idx)

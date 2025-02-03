@@ -191,7 +191,7 @@ def display_high_contrast_colormap (idx, target, prediction, prefix="", colormap
         pcm = ax[1].pcolormesh(prediction_plot, cmap=colormap, vmin=np.min(target), vmax = percent * np.max(target))
         ax[1].set_title("Prediction")
         fig.colorbar(pcm, ax=ax[1], extend='both', orientation='vertical')
-        fig.canvas.set_window_title(prefix+"High_Contrast_Depth_Evaluation")
+        fig.canvas.manager.set_window_title(prefix+"High_Contrast_Depth_Evaluation")
     if folder_name is not None:
         plt.savefig('%s/frame_%010d.png' % (folder_name, idx))
         plt.close(fig)
@@ -212,7 +212,7 @@ def display_high_contrast_color_logmap (idx, data, prefix="", name="data", color
         ax.set_xticklabels([]) # no tick numbers in the target plot horizontal axis
         #cbar = fig.colorbar(pcm, ax=ax, extend='both', orientation='vertical')
         #cbar.ax.set_yticklabels(['10', '20', '30', '40', '50' '60'])  # vertically oriented colorbar
-        fig.canvas.set_window_title(prefix+"High_Contrast_Depth_Evaluation")
+        fig.canvas.manager.set_window_title(prefix+"High_Contrast_Depth_Evaluation")
         plt.savefig('%s/%s_frame_%010d.png' % (folder_name, name, idx))
         #plt.show()
 
@@ -312,7 +312,7 @@ def add_to_metrics(idx, metrics, target_, prediction_, mask, event_frame = None,
 
         mx = np.max(abs_diff_)
         #print(np.where(abs_diff_> 0.9*mx))
-        fig.canvas.set_window_title(prefix+"_Depth_Evaluation")
+        fig.canvas.manager.set_window_title(prefix+"_Depth_Evaluation")
         plt.show()
 
     return metrics
@@ -322,10 +322,14 @@ if __name__ == "__main__":
     flags = FLAGS()
 
     # predicted labels
-    prediction_files = sorted(glob.glob(join(flags.predictions_dataset, 'data', '*.npy')))
+    path_pred = join(flags.predictions_dataset, 'data', '*.npy')
+    print(f"Checking path: {path_pred}")
+    prediction_files = sorted(glob.glob(path_pred))
     prediction_files = prediction_files[flags.prediction_offset:]
 
-    target_files = sorted(glob.glob(join(flags.target_dataset, 'data', '*.npy')))
+    path_test = join(flags.target_dataset, 'data', '*.npy')
+    print(f"Checking path: {path_test}")
+    target_files = sorted(glob.glob(path_test))
     target_files = target_files[flags.target_offset:]
 
     if flags.event_masks is not "":
