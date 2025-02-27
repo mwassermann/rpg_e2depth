@@ -1,3 +1,13 @@
+fork of e2depth working with event data, rather than voxel grids. implemented live filtering to reduce hardware load. too much computation within ros2 caused latency issues. while the filters were optimized for minimal error, the the depth estimation error still increases from filtering the inputs when using the model trained on all events. next this code will be used to train the model with filtered event data. this is part of the subproject on bottleneck architectures.
+
+run inference:
+python run_depth.py -c pretrained/E2DEPTH_si_grad_loss_mixed.pth.tar -i data/test/events/data --output_folder <inference output folder>  --save_numpy --show_event --display --save_inv_log --save_color_map
+
+run evaluation:
+python evaluation.py --target_dataset data/test/depth --predictions_dataset <inference output folder>/reconstruction --output_folder <evaluation output folder>
+
+below is the original documentation
+
 # Learning Monocular Dense Depth from Events
 
 ![Learning Monocular Dense Depth from Events](./doc/img/e2depth_post1.gif)
