@@ -4,13 +4,14 @@ from utils.event_readers import EventDataset
 from utils.event_tensor_utils import events_to_voxel_grid_pytorch
 from os.path import join, basename
 import numpy as np
-import json
 import argparse
 import shutil
 import os
 from depth_prediction import DepthEstimator
 from options.inference_options import set_depth_inference_options
 import random
+from scipy.ndimage import convolve
+
 
 class SimpleNamespace(object):
     def init(self, dictionary):
@@ -49,8 +50,9 @@ class AdaptiveTemporalDensityFilter: # Renamed class for clarity
         #print("Reduction: %d events" % (num_events_before - len(filtered_events)))
         return np.array(filtered_events)
 
-def density_filter(events, resolution, min_density=0, max_density=5): # density_filter function
+def density_filter(events, resolution, min_density=1, max_density=5): # density_filter function
     width, height = resolution
+    grid_counts = np.zeros((width, height), dtype=np.int32)
     grid = np.zeros((width, height), dtype=np.int32)
     #print('In density: ', events.shape)
     for event in events:
@@ -58,9 +60,9 @@ def density_filter(events, resolution, min_density=0, max_density=5): # density_
         if 0 <= x < width and 0 <= y < height:
             grid[x, y] += 1
     #print(max(grid.flatten()))
-    return np.array([event for event in events if min_density <= grid[int(event[1]), int(event[2])] <= max_density])
+    return np.array([event for event in events if min_density < grid[int(event[1]), int(event[2])] <= max_density])
 
-def density_filter_new(events, resolution, min_density=0, start_downsample_density=40, max_density=872, max_downsample_rate=0.95):
+def density_filter_new(events, resolution, min_density=1, start_downsample_density=5, max_density=10, max_downsample_rate=0.90):
     width, height = resolution
     grid = np.zeros((width, height), dtype=np.int32)
 
@@ -92,8 +94,52 @@ def density_filter_new(events, resolution, min_density=0, start_downsample_densi
             # Downsample the events based on downsample_rate
             if random.random() < keep_rate: # Probability of keeping the event
                 filtered_events.append(event)
+            
 
     return np.array(filtered_events)
+
+
+
+def density_filter_with_neighbors(events, resolution, min_density=0.2, start_downsample_density=2, max_density=4, max_downsample_rate=0.95, neighborhood_size=3):
+    width, height = resolution
+    grid = np.zeros((width, height), dtype=np.int32)
+    
+    # Calculate event densities
+    for event in events:
+        x, y = int(event[1]), int(event[2])
+        if 0 <= x < width and 0 <= y < height:
+            grid[x, y] += 1
+    
+    # Define a convolution kernel (square neighborhood)
+    kernel = np.ones((neighborhood_size, neighborhood_size), dtype=np.float32)
+    neighborhood_density = convolve(grid, kernel, mode='reflect')
+    
+    filtered_events = []
+    for event in events:
+        x, y = int(event[1]), int(event[2])
+        if not (0 <= x < width and 0 <= y < height):
+            continue  # Skip events outside valid bounds
+        
+        avg_density = neighborhood_density[x, y] / (neighborhood_size ** 2)
+        
+        if avg_density < min_density:
+            continue  # Filter out events in too-low-density areas
+        
+        if avg_density >= start_downsample_density:
+            filtered_events.append(event)  # Keep event in high-density areas
+        else:
+            downsample_rate = min(max_downsample_rate * (avg_density - start_downsample_density) / (max_density - start_downsample_density), max_downsample_rate)
+            keep_rate = 1 - downsample_rate
+            if random.random() < keep_rate:
+                filtered_events.append(event)
+            else:
+                # Reduce neighborhood density if event is removed
+                neighborhood_density[max(0, x - neighborhood_size // 2):min(width, x + neighborhood_size // 2 + 1),
+                                     max(0, y - neighborhood_size // 2):min(height, y + neighborhood_size // 2 + 1)] -= 1
+    
+    return np.array(filtered_events)
+
+
 
 def save_events(events, output_file): # save_events function
     with open(output_file, "w") as f:
@@ -115,6 +161,9 @@ def load_event_data(npy_folder): # load_event_data function
     return np.array(all_events)
 
 if __name__ == "__main__":
+
+
+    os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
     parser = argparse.ArgumentParser(
         description='Evaluating a trained network')
@@ -174,7 +223,7 @@ if __name__ == "__main__":
                         join(output_dir, dataset_name, 'boundary_timestamps.txt'))
 
     idx = 0
-    filter = AdaptiveTemporalDensityFilter(resolution=(346, 260), adaptation_rate=0.06, decay_rate=0.025, density_threshold=1.5)
+    #filter = AdaptiveTemporalDensityFilter(resolution=(346, 260), adaptation_rate=0.06, decay_rate=0.025, density_threshold=1.5)
     event_count = 0
     filter_count = 0
     while idx < N:
@@ -184,8 +233,8 @@ if __name__ == "__main__":
 
         events_np = np.load(join(base_folder, event_folder , 'events_{:010d}.npy'.format(idx))) 
         event_count += events_np.shape[0]
-        #events_np = density_filter(events_np, resolution=(width,height))
-        events_np = filter.apply(events_np)
+        events_np = density_filter_with_neighbors(events_np, resolution=(width,height))
+        #events_np = filter.apply(events_np)
         filter_count += events_np.shape[0]
         events = torch.from_numpy(events_np) 
         events=events.to('cpu') 
